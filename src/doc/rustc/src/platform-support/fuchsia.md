@@ -183,9 +183,10 @@ hello_fuchsia/
 An alternative to the first workflow is to target Fuchsia by using
 `rustc` built from source.
 
-Before building Rust for Fuchsia, you'll need a clang toolchain that supports
-Fuchsia as well. A recent version (14+) of clang should be sufficient to compile
-Rust for Fuchsia.
+Before building Rust for Fuchsia, you'll need the following installed:
+
+ - Recent version of the clang toolchain (14+).
+ - Recent version of [ninja](https://github.com/ninja-build/ninja/wiki/Pre-built-Ninja-packages) (v1+)
 
 x86-64 and AArch64 Fuchsia targets can be enabled using the following
 configuration in `config.toml`:
@@ -226,6 +227,7 @@ directory) by setting a custom prefix in `config.toml`:
 [install]
 # Make sure to use the absolute path to your install directory
 prefix = "<RUST_SRC_PATH>/install"
+etc = "etc"
 ```
 
 Next, the following environment variables must be configured. For example, using
@@ -567,11 +569,25 @@ hello_fuchsia/
 
 ### Starting the Fuchsia emulator
 
-Start a Fuchsia emulator in a new terminal using:
+Start a Fuchsia emulator in a new terminal using instructions available at
+https://fuchsia.dev/fuchsia-src/development/sdk/ffx/start-the-fuchsia-emulator.
+The simplest product bundle to use is "core.x64", and the emulator should
+be started with the `--headless` flag.
+
+This generally looks something like
 
 ```sh
-${SDK_PATH}/tools/${ARCH}/ffx product-bundle get workstation_eng.qemu-${ARCH}
-${SDK_PATH}/tools/${ARCH}/ffx emu start workstation_eng.qemu-${ARCH} --headless
+ffx --machine json product lookup minimal.x64 22.20240703.1.1 --base-url gs://fuchsia/development/22.20240703.1.1
+ffx product download gs://fuchsia-public-artifacts-release/builds/8743451778952423585/product_bundles/minimal.x64/transfer.json ./local_pb
+ffx emu start ./local_pb --headless --net auto --accel auto
+```
+
+This may be necessary too
+```sh
+ffx repository create ./tmp/rust-testing
+ffx repository add-from-pm --repository rust-testing ./tmp/rust-testing
+ffx repository server start --address '[::]:0'
+ffx target repository register --repository rust-testing
 ```
 
 ### Watching emulator logs
@@ -703,14 +719,15 @@ We can then use the script to start our test environment with:
 ( \
     source config-env.sh &&                                                   \
     src/ci/docker/scripts/fuchsia-test-runner.py start                        \
-    --rust-build ${RUST_SRC_PATH}/build                                       \
+    --rust-build ${RUST_SRC_PATH}/fuchsia-build                               \
     --sdk ${SDK_PATH}                                                         \
     --target {x86_64-unknown-fuchsia|aarch64-unknown-fuchsia}                 \
     --verbose                                                                 \
 )
 ```
 
-Where `${RUST_SRC_PATH}/build` is the `build-dir` set in `config.toml`.
+Where `${RUST_SRC_PATH}/fuchsia-build` is the build directory set by
+`build.build-dir` in `config.toml`.
 
 Once our environment is started, we can run our tests using `x.py` as usual. The
 test runner script will run the compiled tests on an emulated Fuchsia device. To
