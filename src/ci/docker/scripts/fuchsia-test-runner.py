@@ -193,18 +193,38 @@ class TestEnvironment:
             stderr=subprocess.STDOUT,
         )
         if process.returncode:
-            self.env_logger.error(
-                f"llvm-readelf failed for binary {binary} with output {process.stdout}"
+            e = f"llvm-readelf failed for binary {binary} with output {process.stdout}"
+            self.env_logger.error(e)
+            raise Exception(e)
+
+        elf_output = json.loads(process.stdout)
+        if len(elf_output) != 1:
+            raise Exception(
+                f"JSON returned by llvm-readelf for binary {binary} \
+                     is not a list with a single entry"
             )
-            raise Exception(f"Unreadable build-id for binary {binary}")
-        data = json.loads(process.stdout)
-        if len(data) != 1:
-            raise Exception(f"Unreadable output from llvm-readelf for binary {binary}")
-        notes = data[0]["Notes"]
-        for note in notes:
-            note_section = note["NoteSection"]
-            if note_section["Name"] == ".note.gnu.build-id":
-                return note_section["Note"]["Build ID"]
+
+        try:
+            note_sections = elf_output[0]["NoteSections"]
+        except Exception as e:
+            e.add_note(
+                f'Failed to read "NoteSections" from llvm-readelf for binary {binary}'
+            )
+            e.add_note(f"elf_output: {elf_output}")
+            raise
+
+        for entry in note_sections:
+            try:
+                note_section = entry["NoteSection"]
+                if note_section["Name"] == ".note.gnu.build-id":
+                    return note_section["Notes"][0]["Build ID"]
+            except Exception as e:
+                e.add_note(
+                    f'Failed to read ".note.gnu.build-id" from NoteSections \
+                        entry in llvm-readelf for binary {binary}'
+                )
+                e.add_note(f"NoteSections: {note_sections}")
+                raise
         raise Exception(f"Build ID not found for binary {binary}")
 
     def generate_buildid_dir(
