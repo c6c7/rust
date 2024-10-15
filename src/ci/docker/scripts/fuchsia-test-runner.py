@@ -622,6 +622,8 @@ class TestEnvironment:
         check_call_with_logging(
             [
                 ffx_path,
+                "-t",
+                "fuchsia-emulator",
                 "target",
                 "repository",
                 "register",
@@ -884,6 +886,8 @@ class TestEnvironment:
         check_call_with_logging(
             [
                 self.tool_path("ffx"),
+                "-t",
+                "fuchsia-emulator",
                 "test",
                 "run",
                 f"fuchsia-pkg://{self.TEST_REPO_NAME}/{package_name}#meta/{package_name}.cm",
@@ -1021,6 +1025,8 @@ class TestEnvironment:
     def debug(self, args):
         command = [
             self.tool_path("ffx"),
+            "-t",
+            "fuchsia-emulator",
             "debug",
             "connect",
             "--",
@@ -1118,6 +1124,8 @@ class TestEnvironment:
         subprocess.run(
             [
                 self.tool_path("ffx"),
+                "-t",
+                "fuchsia-emulator",
                 "log",
                 "--since",
                 "now",
